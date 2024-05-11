@@ -1,21 +1,19 @@
 package com.example.pumproject
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,7 +28,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.pumproject.databaseConnection.ApiClient
 import com.example.pumproject.ui.theme.PUMprojectTheme
+import kotlin.math.log
 
 
 class MainActivity : ComponentActivity() {
@@ -100,8 +100,13 @@ fun RegisterScreen(
     var login by remember { mutableStateOf(TextFieldValue()) }
     var password by remember { mutableStateOf(TextFieldValue()) }
     var databaseFeedback by remember { mutableStateOf("") }
+    var buttonClicked by remember { mutableStateOf(false) }
+    var loginReturnCode by remember {
+        mutableStateOf(-1)
+    }
 
     Column(
+
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -137,11 +142,12 @@ fun RegisterScreen(
             modifier = Modifier
                 .padding(top = 24.dp),
             onClick = {
+
                 val message="Registered succesfuly";
-                if (Database_info()==1)
+                if (loginReturnCode==1)
                 { onButtonClicked(State.Map)
                 }
-                else if(Database_info()==0)
+                else if(loginReturnCode==0)
                     databaseFeedback="Other user use this login"
                 if(login.text.length<5)
                     databaseFeedback="Incorect login, minimum length is five letters"
@@ -163,6 +169,10 @@ fun RegisterScreen(
 
 
     }
+    LaunchedEffect(buttonClicked) {
+        loginReturnCode = Database_info(login.text, password.text)
+        buttonClicked = false
+    }
 
 }
 
@@ -176,6 +186,13 @@ private fun LoginScreen(
     var login by remember { mutableStateOf(TextFieldValue()) }
     var password by remember { mutableStateOf(TextFieldValue()) }
     var database_feedback by remember { mutableStateOf("") }
+    var buttonClicked = remember { mutableStateOf(false) }
+    var loginReturnCode by remember {
+        mutableStateOf(-1)
+    }
+
+
+
 
     Column(
         modifier = modifier.fillMaxSize(),
@@ -213,20 +230,25 @@ private fun LoginScreen(
                 modifier = Modifier
                     .padding(top = 24.dp),
                 onClick = {
+                    buttonClicked.value = true
 
-                    if ((Database_info()==2) && (password.text.length>4) && (login.text.length>4))
+
+
+                    if (loginReturnCode==2 && (password.text.length>4) && (login.text.length>4))
                         { onButtonClicked(login.text, State.Map)
                     }
-                    else if(Database_info()==1)
+                    else if(loginReturnCode==1)
                         database_feedback="Wrong password"
-                    else if(Database_info()==0)
+                    else if(loginReturnCode==0)
                         database_feedback="User does not exist"
                     if(password.text.toString().length<5 || login.text.toString().length<5)
                     {
                         database_feedback="Password or login to short"
                     }
 
-                }){
+                })
+
+            {
                 Text("Login")
             }
 
@@ -241,17 +263,40 @@ private fun LoginScreen(
 
 
     }
+    Column(
+        modifier = modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = loginReturnCode.toString())
+        Text(text = login.text)
+    }
+    LaunchedEffect(buttonClicked.value) {
+
+        loginReturnCode = Database_info(login.text, password.text)
+        buttonClicked.value = false
+    }
 }
 
 
 
-fun Database_info(): Int
+suspend fun Database_info(name: String=" ", pass: String=" "): Int
 {
-    return 2
+    println(name)
+    val apiService = ApiClient.create()
+       val user = apiService.getUser(name.toString(),pass.toString())
+    if(user.isEmpty())
+        return 0
+
+    if(user[0].nickname==name&&user[0].hashPassword!=pass)
+        return 1
+    if(user[0].nickname==name&&user[0].hashPassword==pass)
+        return 2
+    return 20   //istnieje haslo ale nie ma uzytkownika
 }
 
 fun Database_register_info(): Int
 {
+
     return 1
 }
 
