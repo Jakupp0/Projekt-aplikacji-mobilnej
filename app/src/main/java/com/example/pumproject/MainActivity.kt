@@ -209,7 +209,9 @@ private fun LoginScreen(
 
         TextField(
             value = login,
-            onValueChange = { login = it },
+            onValueChange = {
+                login = it
+                },
             label = { Text("Login") },
                     keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Text,
@@ -217,7 +219,9 @@ private fun LoginScreen(
         )
         TextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = { password = it
+
+                            },
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.padding(top = 20.dp),
@@ -231,9 +235,6 @@ private fun LoginScreen(
                     .padding(top = 24.dp),
                 onClick = {
                     buttonClicked.value = true
-
-
-
                     if (loginReturnCode==2 && (password.text.length>4) && (login.text.length>4))
                         { onButtonClicked(login.text, State.Map)
                     }
@@ -270,10 +271,8 @@ private fun LoginScreen(
         Text(text = loginReturnCode.toString())
         Text(text = login.text)
     }
-    LaunchedEffect(buttonClicked.value) {
-
-        loginReturnCode = Database_info(login.text, password.text)
-        buttonClicked.value = false
+    LaunchedEffect(login,password) {
+            loginReturnCode = Database_info(login.text, password.text)
     }
 }
 
