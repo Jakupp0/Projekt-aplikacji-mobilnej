@@ -7,6 +7,9 @@ import retrofit2.http.Query
 interface ApiService {
     @GET("php1/index.php/user/CheckUser")
     suspend fun getUser(@Query("name") name :String,@Query("passwd") passwd: String ): List<User>
-    @GET("php1/index.php/user/AddUser?name=jakupp&passwd=janek")
-    suspend fun AddUser(): Int
+    @GET("php1/index.php/user/AddUser")
+    suspend fun AddUser(@Query("name")name :String,@Query("passwd") passwd: String): DatabaseInsert
+
+
+
 }

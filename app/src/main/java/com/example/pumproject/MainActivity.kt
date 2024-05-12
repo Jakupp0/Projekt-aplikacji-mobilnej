@@ -5,6 +5,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -17,6 +18,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pumproject.databaseConnection.ApiClient
 import com.example.pumproject.ui.theme.PUMprojectTheme
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlin.math.log
 
 
@@ -101,9 +105,10 @@ fun RegisterScreen(
     var password by remember { mutableStateOf(TextFieldValue()) }
     var databaseFeedback by remember { mutableStateOf("") }
     var buttonClicked by remember { mutableStateOf(false) }
-    var loginReturnCode by remember {
-        mutableStateOf(-1)
-    }
+    var loginReturnCode by remember { mutableStateOf(-1) }
+    var doneLogin by remember { mutableStateOf(false) }
+    var donePassword by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
 
@@ -123,6 +128,9 @@ fun RegisterScreen(
             value = login,
             onValueChange = { login = it },
             label = { Text("Login") },
+            keyboardActions = KeyboardActions(onDone = {
+                    doneLogin=true
+            }),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Text,
                 imeAction = ImeAction.Done)
@@ -130,6 +138,9 @@ fun RegisterScreen(
         TextField(
             value = password,
             onValueChange = { password = it },
+            keyboardActions = KeyboardActions(onDone = {
+                donePassword=true
+            }),
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.padding(top = 20.dp),
@@ -142,19 +153,19 @@ fun RegisterScreen(
             modifier = Modifier
                 .padding(top = 24.dp),
             onClick = {
-
-                val message="Registered succesfuly";
-                if (loginReturnCode==1)
-                { onButtonClicked(State.Map)
+            coroutineScope.launch {
+                loginReturnCode = Database_register_info(login.text,password.text)
+                if (loginReturnCode==0)
+                { databaseFeedback="Registered successfully!"
                 }
-                else if(loginReturnCode==0)
+                else if(loginReturnCode==1)
                     databaseFeedback="Other user use this login"
                 if(login.text.length<5)
                     databaseFeedback="Incorect login, minimum length is five letters"
                 else if(password.text.length<5)
                     databaseFeedback="Incorect password, minimum length is five letters"
 
-            }){
+            }}){
             Text("Register")
         }
 
@@ -169,9 +180,13 @@ fun RegisterScreen(
 
 
     }
-    LaunchedEffect(buttonClicked) {
-        loginReturnCode = Database_info(login.text, password.text)
-        buttonClicked = false
+
+    Column(
+        modifier = modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = loginReturnCode.toString())
+        Text(text = login.text)
     }
 
 }
@@ -190,6 +205,7 @@ private fun LoginScreen(
     var loginReturnCode by remember {
         mutableStateOf(-1)
     }
+
 
 
 
@@ -272,7 +288,7 @@ private fun LoginScreen(
         Text(text = login.text)
     }
     LaunchedEffect(login,password) {
-            loginReturnCode = Database_info(login.text, password.text)
+        loginReturnCode = Database_info(login.text, password.text)
     }
 }
 
@@ -280,9 +296,9 @@ private fun LoginScreen(
 
 suspend fun Database_info(name: String=" ", pass: String=" "): Int
 {
-    println(name)
-    val apiService = ApiClient.create()
-       val user = apiService.getUser(name.toString(),pass.toString())
+
+     val apiService = ApiClient.create()
+     val user = apiService.getUser(name.toString(),pass.toString())
     if(user.isEmpty())
         return 0
 
@@ -290,13 +306,20 @@ suspend fun Database_info(name: String=" ", pass: String=" "): Int
         return 1
     if(user[0].nickname==name&&user[0].hashPassword==pass)
         return 2
-    return 20   //istnieje haslo ale nie ma uzytkownika
+    return 3   //default
 }
 
-fun Database_register_info(): Int
+suspend fun Database_register_info(name: String=" ", pass: String=" "): Int
 {
+    val apiService = ApiClient.create()
+    if(name.length>5 && pass.length > 5) {
+        val output = apiService.AddUser(name.toString(), pass.toString())
+        println(output)
+        return output.output
+    }
 
-    return 1
+
+    return 2     //0 dodano pomyslnie / 1 - istnieje //2 za krotkie
 }
 
 
