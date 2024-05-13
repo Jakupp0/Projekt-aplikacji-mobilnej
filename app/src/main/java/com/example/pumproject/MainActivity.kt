@@ -1,14 +1,24 @@
 package com.example.pumproject
+
+import android.annotation.SuppressLint
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -23,6 +33,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -30,11 +42,34 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
 import com.example.pumproject.databaseConnection.ApiClient
 import com.example.pumproject.ui.theme.PUMprojectTheme
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.log
+
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import com.example.pumproject.ui.theme.PUMprojectTheme
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.compose.ui.res.painterResource
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.example.pumproject.ui.theme.Pink40
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.runtime.remember
+import androidx.compose.ui.res.painterResource
+import androidx.navigation.compose.rememberNavController
+
 
 
 class MainActivity : ComponentActivity() {
@@ -73,26 +108,14 @@ fun Main(modifier: Modifier = Modifier) {
                     currentState = state // Navigate to the map screen
                 })
         } else if (currentState==State.Map) {
-            MainScreen(userLogged)
+            MyBottomApp(userLogged)
         }
         else if (currentState==State.Register) {
             RegisterScreen(onButtonClicked = { newState -> currentState = newState as State })
         }
     }
-}
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun MainScreen(userLogged:String,
-    modifier: Modifier = Modifier
-) {
-    Surface(modifier) {
-        Text(text=userLogged,
-            fontSize = 40.sp,
-            modifier = Modifier.padding(top = 40.dp))
-    }
 }
-
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -292,7 +315,72 @@ private fun LoginScreen(
     }
 }
 
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MyBottomApp(userLogged:String) {
+    val navigationController = rememberNavController()
+    val selected = remember {
+        mutableStateOf(Icons.Default.Home)
+    }
 
+    Scaffold(
+        bottomBar = {
+            BottomAppBar(
+                containerColor = Color(0xFF85C1E9 )
+            ) {
+                IconButton(onClick = {
+                    selected.value = Icons.Default.Home
+                    navigationController.navigate(Screens.MapScreen.screen) { popUpTo(0) }
+                }, modifier = Modifier.weight(1f)) {
+                    Icon(
+                        Icons.Default.Home,
+                        contentDescription = null,
+                        modifier = Modifier.size(26.dp),
+                        tint = if (selected.value == Icons.Default.Home) Color.White else Color.DarkGray
+                    )
+                }
+
+                IconButton(onClick = {
+                    selected.value = Icons.Default.Menu
+                    navigationController.navigate(Screens.PlacesScreen.screen) { popUpTo(0) }
+                }, modifier = Modifier.weight(1f)) {
+                    Icon(
+                        Icons.Default.Menu,
+                        contentDescription = null,
+                        modifier = Modifier.size(26.dp),
+                        tint = if (selected.value == Icons.Default.Menu) Color.White else Color.DarkGray
+                    )
+                }
+
+                IconButton(onClick = {
+                    selected.value = Icons.Default.Person
+                    navigationController.navigate(Screens.ProfileScreen.screen) { popUpTo(0) }
+                }, modifier = Modifier.weight(1f)) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        modifier = Modifier.size(26.dp),
+                        tint = if (selected.value == Icons.Default.Person) Color.White else Color.DarkGray
+                    )
+                }
+            }
+        }
+    ) {
+        paddingValues ->
+        NavHost(navigationController, startDestination = Screens.MapScreen.screen) {
+            composable(Screens.MapScreen.screen) {
+                MapScreen(userLogged = userLogged)
+            }
+            composable(Screens.PlacesScreen.screen) {
+                PlacesScreen()
+            }
+            composable(Screens.ProfileScreen.screen) {
+                ProfileScreen()
+            }
+        }
+    }
+}
 
 suspend fun Database_info(name: String=" ", pass: String=" "): Int
 {
@@ -328,6 +416,6 @@ suspend fun Database_register_info(name: String=" ", pass: String=" "): Int
 @Composable
 fun GreetingPreview() {
     PUMprojectTheme {
-        Main()
+        MyBottomApp("place_holder")
     }
 }

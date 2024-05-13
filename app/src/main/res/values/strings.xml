@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">PUMproject</string>
+    <string name="screen_title_home" />
+    <string name="screen_title_settings" />
+    <string name="screen_title_profile" />
+    <string name="screen_title_places" />
+    <string name="screen_title_map" />
 </resources>
