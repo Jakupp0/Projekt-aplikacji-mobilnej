@@ -281,12 +281,10 @@ suspend fun delete() {
         apiService.DeleteUser(id)
 }
 @Composable
-fun FriendsScreen(modifier: Modifier,navController: NavHostController) {
+fun FriendsScreen(modifier: Modifier, navController: NavHostController) {
+    val friends = remember { mutableStateListOf<Friend>() }
 
-    var datataken by remember { mutableStateOf(false) }
-    var friends by remember { mutableStateOf(mutableListOf(Friend())) }
-
-    Column(modifier = Modifier.padding(bottom = 80.dp)) {
+    Column(modifier = modifier.padding(bottom = 80.dp)) {
         Text(text = "Lista znajomych")
         Spacer(modifier = Modifier.height(60.dp))
         LazyColumn(
@@ -300,14 +298,14 @@ fun FriendsScreen(modifier: Modifier,navController: NavHostController) {
         }
     }
 
-    LaunchedEffect(friends) {
-        friends = getFriends()
-        friends.removeIf{it.stage!="Accepted"}
+    LaunchedEffect(Unit) {
+        val fetchedFriends = getFriends()
+        friends.clear()
+        friends.addAll(fetchedFriends.filter { it.stage == "Accepted" })
+        println(friends.size)
+
     }
-
-
 }
-
 
 
 
@@ -321,7 +319,6 @@ fun ListItem(item: Friend) {
     var field1 by remember { mutableStateOf(item.username2) }
     var field2 by remember { mutableStateOf(item.createdate) }
     var delete : Boolean by remember {mutableStateOf(false)}
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -431,7 +428,7 @@ fun friendsManager(navController: NavHostController){
     var clickedInvitation : Boolean by remember { mutableStateOf(false) }
     var clickedAdd : Boolean by remember { mutableStateOf(false) }
     var message : String by remember { mutableStateOf("Wyszukaj znajomych") }
-    var friends by remember { mutableStateOf<List<Friend>>(emptyList()) }
+    val friends = remember { mutableStateListOf<Friend>() }
 
     Column(
         modifier = Modifier
@@ -536,8 +533,10 @@ fun friendsManager(navController: NavHostController){
     }
     LaunchedEffect(clickedAdd) {
         if(clickedAdd==true) {
-            friends = getFriendRequests(userInformation.name)
-            clickedAdd=false
+            val fetchedFriends = getFriends()
+            friends.clear()
+            friends.addAll(fetchedFriends.filter { it.stage == "Pending" && it.username2!= userInformation.name})
+            clicked = false
         }
 
     }
@@ -560,7 +559,7 @@ suspend fun sendInvitation(newUser: String){
 }
 suspend fun AcceptInvitation(user: String){
     val apiService = ApiClient.create()
-    apiService.accInvitation(user, userInformation.name)
+    apiService.accInvitation( userInformation.name,user)
 }
 
 suspend fun getFriendRequests(user : String): List<Friend> {
