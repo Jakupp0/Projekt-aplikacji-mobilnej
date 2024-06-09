@@ -104,18 +104,15 @@ fun ProfileScreen(navController: NavHostController) {
             }
 
             Spacer(modifier = Modifier.height(32.dp))
-
+            Text(text = "Aktualności")
+            Spacer(modifier = Modifier.height(32.dp))
             // Placeholder for RecyclerView
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(400.dp)
-                    .background(Color.LightGray)
+            LazyColumn(
+                modifier = Modifier.height(300.dp)
             ) {
-                Text(
-                    text = "RecyclerView Placeholder",
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                items(30) { index ->
+                    Text(text = "Item $index")
+                }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -190,7 +187,7 @@ fun ManageAccountScreen(navController: NavHostController,context: Context) {
 @Composable
 fun deleteScreen(navController: NavHostController,context: Context){
     var deleteAccount by remember { mutableStateOf(false) }
-    var deleted by remember { mutableStateOf(0) }
+
     Column(){
         Text(text = "Jesteś pewny?")
         Row(modifier = Modifier.fillMaxWidth()){
@@ -319,6 +316,11 @@ fun ListItem(item: Friend) {
     var field1 by remember { mutableStateOf(item.username2) }
     var field2 by remember { mutableStateOf(item.createdate) }
     var delete : Boolean by remember {mutableStateOf(false)}
+    if(item.username1== userInformation.name)
+        field1 = item.username2
+    else{
+        field1 = item.username1
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -346,14 +348,14 @@ fun ListItem(item: Friend) {
         Text(
             text = "Znajomość od: "+field2, modifier = Modifier.fillMaxWidth()
         )
-        Button(onClick = { delete = true }) {
+        Button(onClick = { delete = true ; field1 = "Usunięty" ; field2 =" "}) {
             Text(text = "Usuń znajomego")
         }
 
     }
     LaunchedEffect(delete) {
         if(delete==true){
-            deleteFriend(field1.toString())
+            deleteFriend(item.username2)
         }
     }
 }
@@ -361,7 +363,7 @@ fun ListItem(item: Friend) {
 
 @Composable
 fun PendingItem(item: Friend) {
-    var field1 by remember { mutableStateOf(item.username2) }
+    var field1 by remember { mutableStateOf(item.username1) }
     var add : Boolean by remember {mutableStateOf(false)}
     var added : Boolean by remember {mutableStateOf(false)}
     Column(
@@ -388,7 +390,7 @@ fun PendingItem(item: Friend) {
 
 
         }
-        if(added==false){
+        if(!added){
         Button(onClick = { add = true ;added=true}) {
             Text(text = "Dodaj znajomego")
         }}
@@ -398,23 +400,14 @@ fun PendingItem(item: Friend) {
 
     }
     LaunchedEffect(add) {
-        if(add==true){
+        if(add){
             AcceptInvitation(field1.toString())
         }
     }
 }
 
 
-suspend fun getFriends() : MutableList<Friend> {
-    val apiService = ApiClient.create()
-    return apiService.CheckFriends(userInformation.name).toMutableList()
-}
-suspend fun deleteFriend(username : String){
 
-    val apiService = ApiClient.create()
-    apiService.delFriend(userInformation.name,username)
-
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -533,9 +526,9 @@ fun friendsManager(navController: NavHostController){
     }
     LaunchedEffect(clickedAdd) {
         if(clickedAdd==true) {
-            val fetchedFriends = getFriends()
+            val fetchedFriends = getInvitations()
             friends.clear()
-            friends.addAll(fetchedFriends.filter { it.stage == "Pending" && it.username2!= userInformation.name})
+            friends.addAll(fetchedFriends.filter { it.stage == "Pending"})
             clicked = false
         }
 
@@ -559,10 +552,24 @@ suspend fun sendInvitation(newUser: String){
 }
 suspend fun AcceptInvitation(user: String){
     val apiService = ApiClient.create()
-    apiService.accInvitation( userInformation.name,user)
+    apiService.accInvitation( user, userInformation.name)
 }
 
 suspend fun getFriendRequests(user : String): List<Friend> {
     val apiService = ApiClient.create()
     return apiService.CheckFriends(userInformation.name)
+}
+suspend fun getFriends() : MutableList<Friend> {
+    val apiService = ApiClient.create()
+    return apiService.CheckFriends(userInformation.name).toMutableList()
+}
+suspend fun getInvitations() : MutableList<Friend> {
+    val apiService = ApiClient.create()
+    return apiService.getInvitation(userInformation.name).toMutableList()
+}
+suspend fun deleteFriend(username : String){
+
+    val apiService = ApiClient.create()
+    apiService.delFriend(userInformation.name,username)
+
 }

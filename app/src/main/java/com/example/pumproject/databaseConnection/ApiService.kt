@@ -29,6 +29,9 @@ interface ApiService {
     @GET("php1/index.php/user/CheckUser")
     suspend fun checkFriend(@Query("name")name :String): List<User>
 
+    @GET("php1/index.php/friends/CheckInvitation")
+    suspend fun getInvitation(@Query("name")name :String): List<Friend>
+
     @GET("php1/index.php/friends/AcceptInvitation")
     suspend fun accInvitation(@Query("name1")name1 :String,@Query("name2")name2 :String)
 
