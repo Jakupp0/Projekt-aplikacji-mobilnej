@@ -3,6 +3,8 @@ package com.example.pumproject
 import android.view.ViewGroup
 import android.webkit.WebSettings
 import android.webkit.WebView
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -12,15 +14,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.navigation.NavHostController
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
 
 @Composable
-fun MapScreen(userLogged:String,
+fun MapScreen(userLogged:String, navigationController: NavHostController,
               modifier: Modifier = Modifier
 ) {
 
@@ -39,27 +43,54 @@ fun MapScreen(userLogged:String,
                     displayZoomControls = false
                     cacheMode = WebSettings.LOAD_DEFAULT
                 }
-
-
-                loadDataWithBaseURL(null,generateMap(), "text/html", "UTF-8",null)
+                //dummy data
+                val a=Place(1,"WFIA","51.1165","17.0283","Tablice na zewnątrz",TypeOfPlace.PUBLIC,"Alek")
+                val b=Place(1,"Miejscówka na słodowej","51.1165","17.0367","Piaścik po algorytmach:))))",TypeOfPlace.PUBLIC,"Mariusz")
+                val c=Place(1,"Pierwszy zamach na Civica","51.1227","17.0421","Chło mi z kopa w drzwi wjechał",TypeOfPlace.PUBLIC,"Bonifacy123")
+                val d=Place(1,"Spot na piwo","51.9721","17.8893","Koniec i bomba kto oznaczał ten tromba",TypeOfPlace.PUBLIC,"Stefan")
+                var ListOfPlaces= mutableListOf<Place>(a,b,c,d);
+                loadDataWithBaseURL(null,generateMap(ListOfPlaces), "text/html", "UTF-8",null)
 
             }
         })
     }
 
-    Button(shape = CircleShape,
-        modifier = Modifier.size(100.dp).padding(start = 0.dp, bottom = 0.dp),
-
-        onClick = { /*TODO*/ }) {
-        Text(text = "+")
-
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(end = 20.dp, bottom = 100.dp), // Adjusted padding to provide more space from the bottom
+        contentAlignment = Alignment.BottomEnd // Align to the bottom start (left) of the container
+    ) {
+        Button(
+            onClick = {  navigationController.navigate(Screens.AddPlaceScreen.screen) { popUpTo(0) } },
+            shape = CircleShape,
+            modifier = Modifier
+                .size(100.dp)
+                .padding(0.dp)
+        ) {
+            Text(
+                text = "+",
+                fontSize = 24.sp,
+                color = Color.White
+            )
+        }
     }
 }
 
 
-fun generateMap(): String
+
+
+fun generateMap(ListOfPlaces: MutableList<Place>): String
 {
     val mapCenter = Pair(51.10, 17.040)
+//"L.marker([51.1165,17,0283]).addTo(map).bindPopup('A pretty CSS popup.<br> Easily customizable.');\n";
+    var popupString="";
+
+
+    ListOfPlaces.forEach { place ->
+       popupString+="L.marker([${place.Latitude}, ${place.Longitude}]).addTo(map).bindPopup('<b>${place.Name}</b><br> ${place.Description} <br>Dodane przez: ${place.UserName}');\n";
+    }
+
 
     // Generate HTML content
     val htmlContent = "<!DOCTYPE html>\n" +
@@ -84,6 +115,7 @@ fun generateMap(): String
             "        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {\n" +
             "            maxZoom: 19,\n" +
             "        }).addTo(map);\n" +
+            popupString+
             "    </script>\n" +
             "</body>\n" +
             "</html>"

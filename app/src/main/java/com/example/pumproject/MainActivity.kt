@@ -259,6 +259,7 @@ private fun LoginScreen(
                     .padding(top = 24.dp),
                 onClick = {
                     buttonClicked.value = true
+
                     if (loginReturnCode==2 && (password.text.length>4) && (login.text.length>4))
                     {
                         onButtonClicked(login.text, State.Map)
@@ -359,7 +360,7 @@ fun MyBottomApp(userLogged:String,context: Context) {
             ) { paddingValues ->
                 NavHost(navigationController, startDestination = Screens.MapScreen.screen) {
                     composable(Screens.MapScreen.screen) {
-                        MapScreen(userLogged = userLogged)
+                        MapScreen(userLogged = userLogged,navigationController)
                     }
                     composable(Screens.PlacesScreen.screen) {
                         PlacesScreen()
@@ -367,7 +368,9 @@ fun MyBottomApp(userLogged:String,context: Context) {
                     composable(Screens.ProfileScreen.screen) {
                         ProfileScreen(context)
                     }
-
+                    composable(Screens.AddPlaceScreen.screen) {
+                        AddPlaceScreen(userLogged = userLogged,navigationController)
+                    }
                 }
             }
 
