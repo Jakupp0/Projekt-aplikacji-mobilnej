@@ -1,6 +1,7 @@
 package com.example.pumproject
 
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
@@ -40,23 +41,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
+import com.example.pumproject.databaseConnection.ApiClient
+import com.example.pumproject.databaseConnection.Place
 import com.example.pumproject.databaseConnection.State
+
 import kotlinx.coroutines.launch
 
-class JavaScriptInterface(private val context: Context) {
-    var latitude: Double = 0.0
-    var longitude: Double = 0.0
+class JavaScriptInterface(private val updateCoordinates: (Double, Double) -> Unit) {
     @JavascriptInterface
     fun onMapClick(lat: Double, lng: Double) {
-        // Handle the coordinates here, e.g., display them in a toast
-        Toast.makeText(context, "Coordinates: $lat, $lng", Toast.LENGTH_SHORT).show()
-        latitude=lat;
-        longitude=lng;
+        updateCoordinates(lat, lng)
     }
-
 }
 
 
+@SuppressLint("JavascriptInterface")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddPlaceScreen(userLogged:String, navigationController: NavHostController,
@@ -64,20 +63,22 @@ fun AddPlaceScreen(userLogged:String, navigationController: NavHostController,
     var Name by remember { mutableStateOf(TextFieldValue()) }
     var Description by remember { mutableStateOf(TextFieldValue()) }
     var userName by remember { mutableStateOf(TextFieldValue()) }
-    var Latitude by remember { mutableStateOf(0.0)}
+    var Latitude by remember { mutableStateOf(0.0) }
     var Longitude by remember { mutableStateOf(0.0) }
     var type by remember { mutableStateOf(TypeOfPlace.PUBLIC) }
-
+    var clicked : Boolean by remember {
+        mutableStateOf(false)
+    }
 
     val mapCenter = Pair(51.10, 17.040)
     val context = LocalContext.current
-    var coordinates by remember { mutableStateOf<Pair<Double, Double>?>(null) }
 
-    val onMapClick: (Pair<Double, Double>) -> Unit = { pair ->
-        coordinates = pair
+    val updateCoordinates: (Double, Double) -> Unit = { lat, lng ->
+        Latitude = lat
+        Longitude = lng
     }
+    val javaScriptInterface = remember { JavaScriptInterface(updateCoordinates) }
 
-    val JavaScriptinterface=JavaScriptInterface(context);
     val htmlContent = "<!DOCTYPE html>\n" +
             "<html lang=\"en\">\n" +
             "<head>\n" +
@@ -94,8 +95,8 @@ fun AddPlaceScreen(userLogged:String, navigationController: NavHostController,
             "    <div id=\"map\"></div>\n" +
             "    <script>\n" +
             "        // Initialize map\n" +
-            "        var map = L.map('map').setView(["+mapCenter.first+", "+mapCenter.second+"], 13);\n" +
-            "var currentMarker;\n"+
+            "        var map = L.map('map').setView([" + mapCenter.first + ", " + mapCenter.second + "], 13);\n" +
+            "var currentMarker;\n" +
             "        \n" +
             "        // Add tile layer (OpenStreetMap)\n" +
             "        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {\n" +
@@ -107,9 +108,9 @@ fun AddPlaceScreen(userLogged:String, navigationController: NavHostController,
             "                if (currentMarker) {\n" +
             "                    map.removeLayer(currentMarker);\n" +
             "                }\n" +
-            "                currentMarker = L.marker([lat, lng]).addTo(map).bindPopup();\n"+
+            "                currentMarker = L.marker([lat, lng]).addTo(map).bindPopup();\n" +
             "                Android.onMapClick(lat, lng);\n" +
-            "            });\n"+
+            "            });\n" +
             "    </script>\n" +
             "</body>\n" +
             "</html>".trimIndent()
@@ -122,14 +123,14 @@ fun AddPlaceScreen(userLogged:String, navigationController: NavHostController,
     ) {
 
 
-
         TextField(
             value = Name,
             onValueChange = {
                 Name = it
             },
             modifier = Modifier
-                .width(320.dp).padding(top=10.dp),
+                .width(320.dp)
+                .padding(top = 10.dp),
             label = { Text("Name") },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Text,
@@ -151,7 +152,9 @@ fun AddPlaceScreen(userLogged:String, navigationController: NavHostController,
             visualTransformation = VisualTransformation.None  // Remove password transformation
         )
 
-        Surface(modifier = modifier.padding(top = 10.dp).height(250.dp)) {
+        Surface(modifier = modifier
+            .padding(top = 10.dp)
+            .height(250.dp)) {
             AndroidView(factory = { context ->
                 WebView(context).apply {
                     layoutParams = ViewGroup.LayoutParams(
@@ -166,27 +169,25 @@ fun AddPlaceScreen(userLogged:String, navigationController: NavHostController,
                         displayZoomControls = false
                         cacheMode = WebSettings.LOAD_DEFAULT
                     }
-                    addJavascriptInterface(JavaScriptinterface, "Android")
-                    Latitude=JavaScriptinterface.latitude;
-                    Longitude=JavaScriptinterface.longitude;
+                    addJavascriptInterface(javaScriptInterface, "Android")
 
-                    loadDataWithBaseURL(null,htmlContent, "text/html", "UTF-8",null)
+                    loadDataWithBaseURL(null, htmlContent, "text/html", "UTF-8", null)
                 }
 
             })
         }
-        Row (
+        Row(
             verticalAlignment = Alignment.CenterVertically
-        ){
+        ) {
             Switch(
                 checked = type == TypeOfPlace.PRIVATE,
                 onCheckedChange = { isChecked ->
                     type = if (isChecked) TypeOfPlace.PRIVATE else TypeOfPlace.PUBLIC
                 },
-                modifier = Modifier.padding(8.dp) // Adjust padding as needed
+                modifier = Modifier.padding(8.dp)
             )
 
-            // Text label indicating the type
+
             Text(text = if (type == TypeOfPlace.PRIVATE) "Private" else "Public")
         }
 
@@ -196,12 +197,34 @@ fun AddPlaceScreen(userLogged:String, navigationController: NavHostController,
             modifier = Modifier
                 .padding(vertical = 8.dp),
             onClick = {
-                Place(1,Name.toString(),Description.toString(),Latitude.toString(),Longitude.toString(),type,userLogged)
+                Place(
+                    1,
+                    Name.toString(),
+                    Description.toString(),
+                    Latitude.toString(),
+                    Longitude.toString(),
+                    type,
+                    userLogged
+                )
                 navigationController.navigate(Screens.MapScreen.screen) { popUpTo(0) }
+
                 Toast.makeText(context, "Place added", Toast.LENGTH_SHORT).show()
+                clicked = true;
             }) {
             Text("Add")
         }
     }
+    LaunchedEffect(clicked) {
+    if(clicked == true) {
+        addPlace(Name.text, Description.text, Latitude, Longitude, type.toString())
+        clicked = false
+    }
+    }
 
 }
+suspend fun addPlace(name:String,description : String,latitude : Double,longitude : Double,type : String){
+
+    val apiService = ApiClient.create()
+    apiService.addPlace(name,latitude.toString(),longitude.toString(),description,type, userInformation.name)
+}
+

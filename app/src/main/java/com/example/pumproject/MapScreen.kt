@@ -12,6 +12,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -19,6 +25,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
+import com.example.pumproject.databaseConnection.ApiClient
+import com.example.pumproject.Place
+import com.example.pumproject.databaseConnection.Friend
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
@@ -27,33 +36,57 @@ import java.io.OutputStreamWriter
 fun MapScreen(userLogged:String, navigationController: NavHostController,
               modifier: Modifier = Modifier
 ) {
-
-    Surface(modifier = modifier.padding(0.dp)) {
-        AndroidView(factory = { context ->
-            WebView(context).apply {
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-                settings.apply {
-                    javaScriptEnabled = true
-                    loadWithOverviewMode = true
-                    useWideViewPort = true
-                    builtInZoomControls = true
-                    displayZoomControls = false
-                    cacheMode = WebSettings.LOAD_DEFAULT
-                }
-                //dummy data
-                val a=Place(1,"WFIA","51.1165","17.0283","Tablice na zewnątrz",TypeOfPlace.PUBLIC,"Alek")
-                val b=Place(1,"Miejscówka na słodowej","51.1165","17.0367","Piaścik po algorytmach:))))",TypeOfPlace.PUBLIC,"Mariusz")
-                val c=Place(1,"Pierwszy zamach na Civica","51.1227","17.0421","Chło mi z kopa w drzwi wjechał",TypeOfPlace.PUBLIC,"Bonifacy123")
-                val d=Place(1,"Spot na piwo","51.9721","17.8893","Koniec i bomba kto oznaczał ten tromba",TypeOfPlace.PUBLIC,"Stefan")
-                var ListOfPlaces= mutableListOf<Place>(a,b,c,d);
-                loadDataWithBaseURL(null,generateMap(ListOfPlaces), "text/html", "UTF-8",null)
-
-            }
-        })
+    var places = remember { mutableStateListOf<com.example.pumproject.databaseConnection.Place>() }
+    var datataken by remember {
+        mutableStateOf(false)
     }
+    LaunchedEffect(Unit) {
+          var  gotplace = getPlacesforMap()
+        places.addAll(gotplace)
+        datataken = true
+
+
+    }
+    if(datataken) {
+        Surface(modifier = modifier.padding(0.dp)) {
+            AndroidView(factory = { context ->
+                WebView(context).apply {
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                    settings.apply {
+                        javaScriptEnabled = true
+                        loadWithOverviewMode = true
+                        useWideViewPort = true
+                        builtInZoomControls = true
+                        displayZoomControls = false
+                        cacheMode = WebSettings.LOAD_DEFAULT
+                    }
+                    //dummy data
+
+                    var ListOfPlaces = mutableListOf<Place>()
+                    for (x in places) {
+                        var newPlace = Place(
+                            1, x.Name, x.Latitude, x.Longitude, x.Description, TypeOfPlace.PUBLIC,
+                                x.UserName
+                        )
+
+                        ListOfPlaces.add(newPlace)
+
+
+                    }
+
+
+
+                    loadDataWithBaseURL(null, generateMap(ListOfPlaces), "text/html", "UTF-8", null)
+
+                }
+            })
+
+        }
+    }
+
 
     Box(
         modifier = Modifier
@@ -121,4 +154,19 @@ fun generateMap(ListOfPlaces: MutableList<Place>): String
             "</html>"
     return htmlContent
 
+}
+
+suspend fun getPlacesforMap(): MutableList<com.example.pumproject.databaseConnection.Place>{
+    val apiService = ApiClient.create()
+    var friends = apiService.CheckFriends(userInformation.name)
+    var names : MutableList<String> = mutableListOf()
+    for (x in friends){
+        names.add(x.username1)
+        names.add(x.username2)
+    }
+    names.removeIf { it == userInformation.name }
+    var places : MutableList<com.example.pumproject.databaseConnection.Place> = apiService.getAllplaces()
+    places.removeIf { it.Type == com.example.pumproject.databaseConnection.TypeOfPlace.PRIVATE && it.UserName!= userInformation.name }
+
+    return places
 }
