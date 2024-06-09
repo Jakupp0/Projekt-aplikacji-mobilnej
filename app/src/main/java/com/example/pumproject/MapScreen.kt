@@ -158,15 +158,17 @@ fun generateMap(ListOfPlaces: MutableList<Place>): String
 
 suspend fun getPlacesforMap(): MutableList<com.example.pumproject.databaseConnection.Place>{
     val apiService = ApiClient.create()
-    var friends = apiService.CheckFriends(userInformation.name)
+    var friends = apiService.CheckFriends(userInformation.name).toMutableList()
+    friends.removeAll { it.stage!="Accepted"  }
     var names : MutableList<String> = mutableListOf()
     for (x in friends){
         names.add(x.username1)
         names.add(x.username2)
     }
+
     names.removeIf { it == userInformation.name }
     var places : MutableList<com.example.pumproject.databaseConnection.Place> = apiService.getAllplaces()
-    places.removeIf { it.Type == com.example.pumproject.databaseConnection.TypeOfPlace.PRIVATE && it.UserName!= userInformation.name }
+    places.removeIf { it.UserName !in names && it.UserName!= userInformation.name  }
 
     return places
 }
