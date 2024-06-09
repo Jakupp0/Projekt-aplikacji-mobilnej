@@ -158,7 +158,7 @@ fun PlaceItemUser(item: Place) {
     LaunchedEffect(delete) {
         if(delete==true){
             deletePlace(item)
-            delete = false
+
         }
     }
     LaunchedEffect(changeVisi) {
