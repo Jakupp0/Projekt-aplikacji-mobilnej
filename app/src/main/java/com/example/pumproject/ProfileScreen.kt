@@ -7,6 +7,8 @@ import android.os.SystemClock.sleep
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -52,7 +54,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.pumproject.databaseConnection.ApiClient
 import com.example.pumproject.databaseConnection.Friend
+import com.example.pumproject.databaseConnection.Place
 import com.example.pumproject.databaseConnection.State
+import com.example.pumproject.databaseConnection.TypeOfPlace
 import com.example.pumproject.databaseConnection.User
 import com.example.pumproject.databaseConnection.UserInfo
 
@@ -75,6 +79,7 @@ fun ProfileScreen(context: Context) {
 
 @Composable
 fun ProfileScreen(navController: NavHostController) {
+    val places = remember { mutableStateListOf<Place>() }
     Surface(
         modifier = Modifier.fillMaxSize(),
     ) {
@@ -94,9 +99,9 @@ fun ProfileScreen(navController: NavHostController) {
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .size(64.dp)
-                        .background(Color.Gray)
+                        .background(Color.White)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(30.dp))
                 Text(
                     text = userInformation.name,
                     fontSize = 20.sp
@@ -108,11 +113,20 @@ fun ProfileScreen(navController: NavHostController) {
             Spacer(modifier = Modifier.height(32.dp))
             // Placeholder for RecyclerView
             LazyColumn(
-                modifier = Modifier.height(300.dp)
+                modifier = Modifier.fillMaxWidth().height(300.dp),
+                contentPadding = PaddingValues(1.dp)
             ) {
-                items(30) { index ->
-                    Text(text = "Item $index")
+                itemsIndexed(places) { index, place ->
+                    PlaceItemProfile(place)
+                    Spacer(modifier = Modifier.height(1.dp))
                 }
+            }
+            LaunchedEffect(Unit) {
+                val fetchedPlaces = getPlacesforProfile()
+                places.clear()
+                places.addAll(fetchedPlaces)
+
+
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -418,6 +432,7 @@ fun friendsManager(navController: NavHostController){
     var newUser by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
     var clicked : Boolean by remember {mutableStateOf(false) }
+
     var clickedInvitation : Boolean by remember { mutableStateOf(false) }
     var clickedAdd : Boolean by remember { mutableStateOf(false) }
     var message : String by remember { mutableStateOf("Wyszukaj znajomych") }
@@ -434,8 +449,10 @@ fun friendsManager(navController: NavHostController){
         TextField( value = newUser,
             onValueChange = { newUser = it },
             keyboardActions = KeyboardActions(onDone = {
-                doneWriting=true
+
                 focusManager.clearFocus()
+
+
             }),
             label = { Text("Wprowadz nazwe uzytkownika") },
             modifier = Modifier.padding(top = 20.dp),
@@ -445,6 +462,7 @@ fun friendsManager(navController: NavHostController){
 
         )
         Button(onClick = { clicked = true}) {
+                doneWriting=true
                 Text(text = "Sprawdz")
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -474,16 +492,29 @@ fun friendsManager(navController: NavHostController){
                             .size(20.dp)
                             .background(Color.White)
                     )
-                    Text(text = newUser)
+                    if(doneWriting==true) {
+                        Text(text = newUser)
+                    }
+                    else{
+                        Text(text = "")
+                    }
                     Button(onClick = {clickedInvitation = true
                     message="Wyslano zaproszenie"}) {
+                        doneWriting = false
                         Text(text = "Dodaj")
 
                     }
                 }
             }
             else{
-                Text(text = "Nie znaleziono")
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                        .border(1.dp, Color.Blue)
+                ) {
+                    Text(text = "Nie znaleziono")
+                }
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -513,8 +544,8 @@ fun friendsManager(navController: NavHostController){
                     newUser = person[0].nickname
             }
             found = true
-            doneWriting = false
             clicked = false
+
         }
     }
 
@@ -529,7 +560,7 @@ fun friendsManager(navController: NavHostController){
             val fetchedFriends = getInvitations()
             friends.clear()
             friends.addAll(fetchedFriends.filter { it.stage == "Pending"})
-            clicked = false
+
         }
 
     }
@@ -571,5 +602,68 @@ suspend fun deleteFriend(username : String){
 
     val apiService = ApiClient.create()
     apiService.delFriend(userInformation.name,username)
+
+}
+
+suspend fun getPlacesforProfile(): MutableList<com.example.pumproject.databaseConnection.Place>{
+    val apiService = ApiClient.create()
+    var friends = apiService.CheckFriends(userInformation.name).toMutableList()
+    friends.removeAll { it.stage!="Accepted"  }
+    var names : MutableList<String> = mutableListOf()
+    for (x in friends){
+        names.add(x.username1)
+        names.add(x.username2)
+    }
+
+    names.removeIf { it == userInformation.name }
+    var places : MutableList<com.example.pumproject.databaseConnection.Place> = apiService.getAllplaces()
+    places.removeIf { it.UserName !in names && it.UserName!= userInformation.name  }
+    places.removeIf { it.UserName== userInformation.name }
+
+    return places
+}
+
+@Composable
+fun PlaceItemProfile(item: Place) {
+    var placeName by remember { mutableStateOf(item.Name) }
+    var creationDate by remember { mutableStateOf(item.CreatedAt) }
+    var delete : Boolean by remember { mutableStateOf(false) }
+    var changeVisi : Boolean by remember { mutableStateOf(false) }
+    var changed : Int  by remember {
+        mutableStateOf(0)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(10.dp)
+            .border(1.dp, Color.Blue)
+            .height(100.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = "Miejsce: "+placeName+" dodane przez: "+item.UserName)
+            
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Dodano: $creationDate"
+            )
+
+
+
+
+        }
+    }
+
 
 }

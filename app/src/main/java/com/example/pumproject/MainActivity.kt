@@ -290,13 +290,7 @@ private fun LoginScreen(
 
 
     }
-    Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = loginReturnCode.toString())
-        Text(text = login.text)
-    }
+
     LaunchedEffect(login,password) {
         loginReturnCode = Database_info(login.text, password.text)
         if(loginReturnCode==2){

@@ -168,7 +168,11 @@ suspend fun getPlacesforMap(): MutableList<com.example.pumproject.databaseConnec
 
     names.removeIf { it == userInformation.name }
     var places : MutableList<com.example.pumproject.databaseConnection.Place> = apiService.getAllplaces()
-    places.removeIf { it.UserName !in names && it.UserName!= userInformation.name  }
+    var userPlaces : MutableList<com.example.pumproject.databaseConnection.Place> = apiService.getAllplaces()
+    places.removeIf { it.UserName !in names}
+    places.removeIf { it.Type == com.example.pumproject.databaseConnection.TypeOfPlace.PRIVATE }
+    userPlaces.removeAll { it.UserName != userInformation.name}
+    places.addAll(userPlaces)
 
     return places
 }
